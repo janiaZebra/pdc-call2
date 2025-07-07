@@ -1,19 +1,28 @@
-# ─── Etapa de build ─────────────────────────────────────────────
+# --- Etapa de compilación ---
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Instala dependencias solo si cambian
 COPY package*.json tsconfig.json ./
 RUN npm ci
 
 COPY src ./src
-COPY twiml.xml ./               # ⬅️ Añade el XML antes de compilar
-RUN npm run build
-RUN cp twiml.xml dist/          # ⬅️ O muévelo después de compilar
 
-# ─── Imagen final ───────────────────────────────────────────────
+# Compila el TypeScript
+RUN npm run build
+
+# Copia el twiml.xml (y otros assets si necesitas) a la carpeta compilada
+RUN cp src/twiml.xml dist/
+
+# --- Etapa final para producción ---
 FROM node:20-alpine
 WORKDIR /app
+
+# Solo copia el código ya compilado y el twiml.xml
 COPY --from=builder /app/dist ./dist
-ENV NODE_ENV=production PORT=8080
+
+ENV NODE_ENV=production
+ENV PORT=8080
 EXPOSE 8080
-CMD ["node","dist/server.js"]
+
+CMD ["node", "dist/server.js"]
